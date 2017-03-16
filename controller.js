@@ -5,79 +5,56 @@ module.exports = chatsController
 
 function chatsController() {
     return {
-        archiveConversation,
         getAllConversations,
         getConversationById,
         getCurrentConversation,
         getPagedArchiveConversations,
         getPagedConversations,
-        insertMessage,
-        getMessagesBySearch
+        getMessagesBySearch,
+
+        // chat middleware 
+        archiveConversation,
+        insertMessage
     }
 
-    function archiveConversation(req, res, next) {
-        chatsService.archiveConversation(req.params.id)
-            .then((conversation) => {
-                const responseModel = new responses.ItemResponse()
-                responseModel.item = conversation
-                res.response = responseModel
-                next()
-            })
-            .catch((err) => {
-                res.status(500).send(new responses.ErrorResponse(err))
-            })
-    }
 
     function getAllConversations(req, res) {
         chatsService.getAllConversations()
-            .then((chats) => {
-                const responseModel = new responses.ItemsResponse()
-                responseModel.items = chats
-                res.json(responseModel)
-            }).catch((err) => {
-                res.status(500).send(new responses.ErrorResponse(err))
-            })
+            .then(chats => itemsResponse(chats, res))
+            .catch(err => errorResponse(err, res))
     }
 
     function getConversationById(req, res) {
         chatsService.getConversationById(req.params.id)
-            .then((conversation) => {
-                const responseModel = new responses.ItemResponse()
-                responseModel.item = conversation
-                res.json(responseModel)
-            }).catch((err) => {
-                res.status(500).send(new responses.ErrorResponse(err))
-            })
+            .then(conversation => itemResponse(conversation, res))
+            .catch(err => errorResponse(err, res))
     }
 
     function getCurrentConversation(req, res) {
         chatsService.getCurrentConversation(req)
-            .then((conversation) => {
-                const responseModel = new responses.ItemResponse()
-                responseModel.item = conversation
-                res.json(responseModel)
-            }).catch((err) => {
-                res.status(500).send(new responses.ErrorResponse(err))
-            })
+            .then(conversation => itemResponse(conversation, res))
+            .catch(err => errorResponse(err, res))
     }
 
     function getPagedArchiveConversations(req, res) {
         chatsService.getPagedConversations(req.params, true)
-            .then(conversations => {
-                const responseModel = new responses.ItemsResponse()
-                responseModel.items = conversations
-                res.json(responseModel)
-            })
+            .then(conversations => itemsResponse(conversations, res))
+            .catch(err => errorResponse(err, res))
     }
 
     function getPagedConversations(req, res) {
         chatsService.getPagedConversations(req.params, false)
-            .then(conversations => {
-                const responseModel = new responses.ItemsResponse()
-                responseModel.items = conversations
-                res.json(responseModel)
-            })
+            .then(conversations => itemsResponse(conversations, res))
+            .catch(err => errorResponse(err, res))
     }
+
+    function searchMessages(req, res) {
+        chatsService.searchMessages(req)
+            .then(result => itemsResponse(result, res))
+            .catch(err => errorResponse)
+    }
+
+    // chat pass through functions
 
     function insertMessage(req, res, next) {
         if (req.body.image === true) {
@@ -89,17 +66,36 @@ function chatsController() {
                 responseModel.item = result
                 res.response = responseModel
                 next()
-            }).catch((err) => {
-                res.status(500).send(new responses.ErrorResponse(err))
             })
+            .catch(err => errorResponse(err, res))
     }
 
-    function searchMessages(req, res) {
-        chatsService.searchMessages(req)
-            .then(result => {
-                const responseModel = new responses.ItemsResponse()
-                responseModel.items = result
-                res.json(responseModel)
-            }).catch(err => res.json(err))
+    function archiveConversation(req, res, next) {
+        chatsService.archiveConversation(req.params.id)
+            .then((conversation) => {
+                const responseModel = new responses.ItemResponse()
+                responseModel.item = conversation
+                res.response = responseModel
+                next()
+            })
+            .catch(err => errorResponse(err, res))
+    }
+
+    // response formatting 
+
+    function itemResponse(result, response) {
+        const responseModel = new responses.ItemResponse()
+        responseModel.item = result
+        res.json(responseModel)
+    }
+
+    function itemsResponse(result, response) {
+        const responseModel = new responses.ItemsResponse()
+        responseModel.items = result
+        res.json(responseModel)
+    }
+
+    function errorResponse(error, response) {
+        res.status(500).send(new responses.ErrorResponse(err))
     }
 }
